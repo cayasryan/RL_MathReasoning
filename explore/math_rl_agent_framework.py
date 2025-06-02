@@ -198,7 +198,7 @@ class MathEnv(gym.Env):
         dataset_split: str = "train[:2048]",  # small default slice
         model_dir: str = "../../../llm/llama/Llama-3.2-1B-Instruct",
         classifier_name: str = "distilbert-base-uncased",
-        penalty_lambda: float = 0.02,
+        penalty_lambda: float = 0.003,
         max_steps: int = 50,
         seed: int = 42,
     ):

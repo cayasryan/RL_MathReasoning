@@ -140,22 +140,22 @@ def get_binary_score(num_tokens: int, used_tokens: int):
     else:
         return 1.0
 
-def gpqa_reward_fn(solution_str: str, ground_truth: Union[str, List[str]], enable_llm = False, num_tokens = -1, valid_response_length = -1):
-    reward_config = RewardConfig()
-    reward_config.use_math_orm = enable_llm
-    def get_model_choice(res):
-        for i in range(len(res)-1, -1, -1):
-            if res[i] == 'A' or res[i] == 'B' or res[i] == 'C' or res[i] == 'D':
-                # Check if res[i-1] is not a character
-                if not (res[i-1] >= 'a' and res[i-1] <= 'z') and not (res[i-1] >= 'A' and res[i-1] <= 'Z'):
-                    return res[i]
-                    break
-        return ''
-    model_choice = get_model_choice(solution_str)
-    if model_choice == ground_truth:
-        return 1.0
-    else:
-        return 0.0
+# def gpqa_reward_fn(solution_str: str, ground_truth: Union[str, List[str]], enable_llm = False, num_tokens = -1, valid_response_length = -1):
+#     reward_config = RewardConfig()
+#     reward_config.use_math_orm = enable_llm
+#     def get_model_choice(res):
+#         for i in range(len(res)-1, -1, -1):
+#             if res[i] == 'A' or res[i] == 'B' or res[i] == 'C' or res[i] == 'D':
+#                 # Check if res[i-1] is not a character
+#                 if not (res[i-1] >= 'a' and res[i-1] <= 'z') and not (res[i-1] >= 'A' and res[i-1] <= 'Z'):
+#                     return res[i]
+#                     break
+#         return ''
+#     model_choice = get_model_choice(solution_str)
+#     if model_choice == ground_truth:
+#         return 1.0
+#     else:
+#         return 0.0
 
 def math_reward_fn(solution_str: str, ground_truth: Union[str, List[str]], num_tokens = -1, valid_response_length = -1, ignore_think_token = False, reward_config : RewardConfig = RewardConfig(), return_delta_score = False):
     reward_fn = RewardMathFn(reward_config)
