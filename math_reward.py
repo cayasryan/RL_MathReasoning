@@ -184,7 +184,7 @@ def math_reward_fn(solution_str: str, ground_truth: Union[str, List[str]], num_t
     if num_tokens != -1:
         if num_tokens < 0:
             # LCPO-Max
-            delta_score = brevity_reward(abs(num_tokens), float(valid_response_length), reward_config.alpha)
+            delta_score = brevity_reward(abs(num_tokens), float(valid_response_length))
 
             correctness_score = 0 if not reward_response.is_correct else 1
             reward = delta_score * correctness_score
