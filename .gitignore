@@ -14,4 +14,13 @@ __pycache__/
 
 outputs/
 MATH/
-explore (old)/ppo_math_agent.zip
+explore/explore (old)/
+explore/explore (old)/ppo_math_agent.zip
+models/
+verl/
+wandb/
+unsloth_compiled_cache/
+grpo_trainer_lora_model/
+scripts/data/MATH_finetuned/
+bert_level/
+bert_type/

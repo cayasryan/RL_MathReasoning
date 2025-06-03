@@ -157,27 +157,56 @@ def get_binary_score(num_tokens: int, used_tokens: int):
 #     else:
 #         return 0.0
 
+
+def brevity_reward(target_tokens, used_tokens, gamma=1/600):
+    """
+    Exponential brevity bonus; caps at 1.0.
+    Encourages large savings more than small ones.
+    """
+    if used_tokens < target_tokens:
+        bonus = 0.5 * (1 - math.exp(-gamma * (target_tokens - used_tokens)))
+        reward = 0.5 + bonus
+    else:
+        reward = 0.5
+    return min(reward, 1.0)
+
 def math_reward_fn(solution_str: str, ground_truth: Union[str, List[str]], num_tokens = -1, valid_response_length = -1, ignore_think_token = False, reward_config : RewardConfig = RewardConfig(), return_delta_score = False):
     reward_fn = RewardMathFn(reward_config)
     reward_response = reward_fn(RewardInput(problem=solution_str, problem_type=RewardType.MATH, model_response=solution_str, ground_truth={"answer": ground_truth}), ignore_think_token=ignore_think_token)
-    # Compute number of words in solution_str
-    if not reward_config.linear_reward and not reward_config.multiplier_reward and not reward_config.sigmoid_reward: 
-        return reward_response.is_correct
+
+    # print(solution_str)
+    # print(f"ground_truth: {ground_truth}")
+    # print(f"reward_response: {reward_response.is_correct}, num_tokens: {num_tokens}, valid_response_length: {valid_response_length}")
+
+    # if not reward_config.linear_reward and not reward_config.multiplier_reward and not reward_config.sigmoid_reward: 
+    #     return reward_response.is_correct
 
     if num_tokens != -1:
         if num_tokens < 0:
             # LCPO-Max
-            if reward_config.sigmoid_reward:
-                delta_score = get_delta_score_sigmoid(num_tokens, float(valid_response_length), reward_config.alpha)
-            else:
-                delta_score = get_delta_score_linear_both(num_tokens, float(valid_response_length), reward_config.alpha)
+            delta_score = brevity_reward(abs(num_tokens), float(valid_response_length), reward_config.alpha)
+
+            correctness_score = 0 if not reward_response.is_correct else 1
+            reward = delta_score * correctness_score
+
+            print(f"Used tokens: {valid_response_length}, num_tokens: {num_tokens}, delta_score: {delta_score}, correctness_score: {correctness_score}, reward: {reward}")
+
+            return reward
+
+            # print(f"Using LCPO-Max brevity reward: {delta_score}")
+
+
+            # if reward_config.sigmoid_reward:
+            #     delta_score = get_delta_score_sigmoid(num_tokens, float(valid_response_length), reward_config.alpha)
+            # else:
+            #     delta_score = get_delta_score_linear_both(num_tokens, float(valid_response_length), reward_config.alpha)
         else:
             # LCPO-Exact
             if reward_config.sigmoid_reward:
                 delta_score = get_delta_score_sigmoid_exact(num_tokens, float(valid_response_length), reward_config.alpha)
             else:
                 delta_score = get_delta_score_linear(num_tokens, float(valid_response_length), reward_config.alpha)
-        print(f"delta_score: {delta_score}, reward_response.is_correct: {reward_response.is_correct}, num_tokens: {num_tokens}, valid_response_length: {valid_response_length}")
+        # print(f"delta_score: {delta_score}, reward_response.is_correct: {reward_response.is_correct}, num_tokens: {num_tokens}, valid_response_length: {valid_response_length}")
         correctness_score = 0 if not reward_response.is_correct else 1
         if reward_config.multiplier_reward:
             if return_delta_score:

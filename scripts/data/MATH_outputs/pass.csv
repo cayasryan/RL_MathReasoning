@@ -1,0 +1,6 @@
+model_path,dataset,pass@1
+RL_MathReasoning/models/L1-Qwen-1.5B-Max,val.parquet,0.0
+RL_MathReasoning/models/L1-Qwen-1.5B-Max,val.parquet,1.0,1.0
+RL_MathReasoning/models/L1-Qwen-1.5B-Max,test.parquet,0.875
+RL_MathReasoning/models/L1-Qwen-1.5B-Max,test.parquet,0.832
+RL_MathReasoning/models/L1-Qwen-1.5B-Max,val.parquet,0.854
