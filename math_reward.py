@@ -83,62 +83,62 @@ class RewardMathFn(RewardFn):
      
         return RewardOutput(reward=self.config.incorrect_reward, is_correct=False)
 
-def get_delta_score(num_tokens: int, used_tokens: int):
-    # Stddev = num_tokens/5
-    # Calculate z-score based on how far used_tokens deviates from target (num_tokens)
-    z_score = (used_tokens - num_tokens) / (500)
-    # Simple Gaussian function that peaks at 1.0 when used_tokens matches target
-    delta_score = math.exp(-z_score**2 / 2)
-    return max(0.1, delta_score)
+# def get_delta_score(num_tokens: int, used_tokens: int):
+#     # Stddev = num_tokens/5
+#     # Calculate z-score based on how far used_tokens deviates from target (num_tokens)
+#     z_score = (used_tokens - num_tokens) / (500)
+#     # Simple Gaussian function that peaks at 1.0 when used_tokens matches target
+#     delta_score = math.exp(-z_score**2 / 2)
+#     return max(0.1, delta_score)
 
-def get_delta_score_linear(num_tokens: int, used_tokens: int, alpha = 1/3000):
-    # z_score = abs(used_tokens - num_tokens) / (num_tokens/2)
-    z_score = abs(used_tokens - num_tokens) * alpha
+# def get_delta_score_linear(num_tokens: int, used_tokens: int, alpha = 1/3000):
+#     # z_score = abs(used_tokens - num_tokens) / (num_tokens/2)
+#     z_score = abs(used_tokens - num_tokens) * alpha
     
-    delta_score = 1 - z_score
-    # return max(0, min(1, delta_score))
-    return delta_score - 1
+#     delta_score = 1 - z_score
+#     # return max(0, min(1, delta_score))
+#     return delta_score - 1
 
-def get_delta_score_linear_both(num_tokens: int, used_tokens: int, alpha = 0.002):
-    # If used_tokens is negative, we have to setup maximum budget constraint
-    if num_tokens < 0:
-        beta = alpha
+# def get_delta_score_linear_both(num_tokens: int, used_tokens: int, alpha = 0.002):
+#     # If used_tokens is negative, we have to setup maximum budget constraint
+#     if num_tokens < 0:
+#         beta = alpha
 
-        delta = used_tokens - abs(num_tokens)
-        sc = 0
-        if delta < 0:
-            sc = beta * delta * -1
-        else:
-            sc = alpha * delta * -1
+#         delta = used_tokens - abs(num_tokens)
+#         sc = 0
+#         if delta < 0:
+#             sc = beta * delta * -1
+#         else:
+#             sc = alpha * delta * -1
 
-        # Clip sc to [-1, 1]
-        sc = max(-1, min(1, sc))
-        return (sc + 1)/2
-    else:
-        return get_delta_score_linear(num_tokens, used_tokens, alpha)
+#         # Clip sc to [-1, 1]
+#         sc = max(-1, min(1, sc))
+#         return (sc + 1)/2
+#     else:
+#         return get_delta_score_linear(num_tokens, used_tokens, alpha)
 
-def get_delta_score_sigmoid(num_tokens: int, used_tokens: int, alpha = 0.01):
-    delta = abs(num_tokens) - used_tokens
-    if delta < 0:
-        delta = delta*alpha
-        sigma_score = 1 / (1 + math.exp(-delta))
-    else:
-        delta = delta*alpha
-        sigma_score = 1 / (1 + math.exp(-delta))
-        sigma_score += 0.1 # Small bonus
-    return max(0, min(1, sigma_score))
+# def get_delta_score_sigmoid(num_tokens: int, used_tokens: int, alpha = 0.01):
+#     delta = abs(num_tokens) - used_tokens
+#     if delta < 0:
+#         delta = delta*alpha
+#         sigma_score = 1 / (1 + math.exp(-delta))
+#     else:
+#         delta = delta*alpha
+#         sigma_score = 1 / (1 + math.exp(-delta))
+#         sigma_score += 0.1 # Small bonus
+#     return max(0, min(1, sigma_score))
 
-def get_delta_score_sigmoid_exact(num_tokens: int, used_tokens: int, alpha = 0.01):
-    delta = abs(num_tokens - used_tokens)
-    delta = delta*alpha
-    sigma_score = 1 / (1 + math.exp(-delta))
-    return max(0, min(1, sigma_score))
+# def get_delta_score_sigmoid_exact(num_tokens: int, used_tokens: int, alpha = 0.01):
+#     delta = abs(num_tokens - used_tokens)
+#     delta = delta*alpha
+#     sigma_score = 1 / (1 + math.exp(-delta))
+#     return max(0, min(1, sigma_score))
 
-def get_binary_score(num_tokens: int, used_tokens: int):
-    if used_tokens > num_tokens:
-        return 0.0
-    else:
-        return 1.0
+# def get_binary_score(num_tokens: int, used_tokens: int):
+#     if used_tokens > num_tokens:
+#         return 0.0
+#     else:
+#         return 1.0
 
 # def gpqa_reward_fn(solution_str: str, ground_truth: Union[str, List[str]], enable_llm = False, num_tokens = -1, valid_response_length = -1):
 #     reward_config = RewardConfig()
@@ -174,52 +174,16 @@ def math_reward_fn(solution_str: str, ground_truth: Union[str, List[str]], num_t
     reward_fn = RewardMathFn(reward_config)
     reward_response = reward_fn(RewardInput(problem=solution_str, problem_type=RewardType.MATH, model_response=solution_str, ground_truth={"answer": ground_truth}), ignore_think_token=ignore_think_token)
 
-    # print(solution_str)
-    # print(f"ground_truth: {ground_truth}")
-    # print(f"reward_response: {reward_response.is_correct}, num_tokens: {num_tokens}, valid_response_length: {valid_response_length}")
 
-    # if not reward_config.linear_reward and not reward_config.multiplier_reward and not reward_config.sigmoid_reward: 
-    #     return reward_response.is_correct
+    delta_score = brevity_reward(abs(num_tokens), float(valid_response_length))
 
-    if num_tokens != -1:
-        if num_tokens < 0:
-            # LCPO-Max
-            delta_score = brevity_reward(abs(num_tokens), float(valid_response_length))
+    correctness_score = 0 if not reward_response.is_correct else 1
+    reward = delta_score * correctness_score
 
-            correctness_score = 0 if not reward_response.is_correct else 1
-            reward = delta_score * correctness_score
+    print(f"Used tokens: {valid_response_length}, num_tokens: {num_tokens}, delta_score: {delta_score}, correctness_score: {correctness_score}, reward: {reward}")
 
-            print(f"Used tokens: {valid_response_length}, num_tokens: {num_tokens}, delta_score: {delta_score}, correctness_score: {correctness_score}, reward: {reward}")
+    return reward
 
-            return reward
-
-            # print(f"Using LCPO-Max brevity reward: {delta_score}")
-
-
-            # if reward_config.sigmoid_reward:
-            #     delta_score = get_delta_score_sigmoid(num_tokens, float(valid_response_length), reward_config.alpha)
-            # else:
-            #     delta_score = get_delta_score_linear_both(num_tokens, float(valid_response_length), reward_config.alpha)
-        else:
-            # LCPO-Exact
-            if reward_config.sigmoid_reward:
-                delta_score = get_delta_score_sigmoid_exact(num_tokens, float(valid_response_length), reward_config.alpha)
-            else:
-                delta_score = get_delta_score_linear(num_tokens, float(valid_response_length), reward_config.alpha)
-        # print(f"delta_score: {delta_score}, reward_response.is_correct: {reward_response.is_correct}, num_tokens: {num_tokens}, valid_response_length: {valid_response_length}")
-        correctness_score = 0 if not reward_response.is_correct else 1
-        if reward_config.multiplier_reward:
-            if return_delta_score:
-                return max(0, delta_score) * correctness_score, delta_score
-            else:
-                return max(0, delta_score) * correctness_score
-        else:
-            if return_delta_score:
-                return delta_score + correctness_score, delta_score
-            else:
-                return delta_score + correctness_score
-    else:
-        return reward_response.is_correct
 
 def majority_at_k(generations: List[str], ground_truths: Union[str, List[str]], k: int = -1, problem: str = "", enable_llm: bool = False, ignore_think_token: bool = False, shuffle: bool = False) -> str:
     """
